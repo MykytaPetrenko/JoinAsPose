@@ -6,7 +6,7 @@ bl_info = {
     "location": "View3D > Sidebar > Tools",
     "description": "Join one armature to another as a pose",
     "warning": "",
-    "wiki_url": "",
+    "wiki_url": "https://github.com/MykytaPetrenko/join_as_pose",
     "category": "Tools",
 }
 
