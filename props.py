@@ -2,15 +2,20 @@ import bpy
 
 
 class JASP_config(bpy.types.PropertyGroup):
-    original_keyframe: bpy.props.BoolProperty(
-        name="Original Keyframe",
+    rest_keyframe: bpy.props.BoolProperty(
+        name="Rest Keyframe",
         default=False,
-        description="Creaates a key for original bone locations and rotations"
+        description="Creaates a key for the rest pose of the target skeleton"
     )
     lock_rotation: bpy.props.BoolProperty(
         name="Lock Rotation",
         default=False,
         description="Keep original rotations of the target skeleton bones"
+    )
+    lock_scale: bpy.props.BoolProperty(
+        name="Lock Scale",
+        default=False,
+        description="Keep original scale of the target skeleton bones"
     )
     frame_step: bpy.props.IntProperty(
         name="Frame Step",

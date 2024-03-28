@@ -26,7 +26,8 @@ def join_as_pose(
         source_obj: bpy.types.Object,
         dest_obj: bpy.types.Object,
         frame: int,
-        lock_rotation: bool
+        lock_rotation: bool = False,
+        lock_scale: bool = False
     ) -> None:
     ones = Vector.Fill(3, 1)
     # Iterate over each bone in the source armature
@@ -34,20 +35,22 @@ def join_as_pose(
         # Get the destination bone with the same name
         dest_bone: bpy.types.PoseBone = dest_obj.pose.bones.get(source_bone.name)
         if dest_bone is not None:
+            loc = source_bone.matrix_local.to_translation()
             if lock_rotation:
-                s_loc = source_bone.matrix_local.to_translation()
-                d_rot = dest_bone.bone.matrix_local.to_quaternion()
-                dest_bone.matrix = Matrix.LocRotScale(s_loc, d_rot, ones)
+                rot = dest_bone.bone.matrix_local.to_quaternion()
             else:
-                s_loc, s_rot, _ = source_bone.matrix_local.decompose()
+                rot = source_bone.matrix_local.to_quaternion()
                 d_rot = dest_bone.bone.matrix_local.to_quaternion()
-                dest_bone.matrix = Matrix.LocRotScale(s_loc, d_rot, ones)
-                context.view_layer.update()
-                dest_bone.matrix = Matrix.LocRotScale(s_loc, s_rot, ones)
+            
+            if lock_scale:
+                scale = ones
+            else:
+                scale = ones * source_bone.length / dest_bone.bone.length 
+            dest_bone.matrix = Matrix.LocRotScale(loc, rot, scale)
             
             # Update view layer (!IMPORTANT)
             context.view_layer.update()
-            create_pose_bone_keys(dest_bone, frame, scale=False)
+            create_pose_bone_keys(dest_bone, frame)
   
 
 class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
@@ -55,15 +58,20 @@ class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
     bl_label = "Join as Pose"
     bl_description = "Join one armature to another as a pose"
 
-    original_keyframe: bpy.props.BoolProperty(
-        name="Original Keyframe",
+    rest_keyframe: bpy.props.BoolProperty(
+        name="Rest Keyframe",
         default=False,
-        description="Creaates a key for original bone locations and rotations"
+        description="Creaates a key for the rest pose of the target skeleton"
     )
     lock_rotation: bpy.props.BoolProperty(
         name="Lock Rotation",
         default=False,
         description="Keep original rotations of the target skeleton bones"
+    )
+    lock_scale: bpy.props.BoolProperty(
+        name="Lock Scale",
+        default=False,
+        description="Keep original scale of the target skeleton bones"
     )
     frame_step: bpy.props.IntProperty(
         name="Frame Step",
@@ -86,19 +94,31 @@ class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
     def execute(self, context):
         frame = context.scene.frame_current
         dest_obj = context.object
-        
-        if self.original_keyframe:
+        did_something = False
+        if self.rest_keyframe:
             join_as_pose(context, dest_obj, dest_obj, frame, self.lock_rotation)
             frame += self.frame_step
             context.scene.frame_current = frame
+            did_something = True
+            context.view_layer.update()
         
         for obj in context.selected_objects:
             if obj == context.object:
                 continue
-            join_as_pose(context, obj, dest_obj, frame, self.lock_rotation)
+            join_as_pose(
+                context,
+                obj,
+                dest_obj,
+                frame,
+                lock_rotation=self.lock_rotation,
+                lock_scale=self.lock_scale
+            )
             frame += self.frame_step
             context.scene.frame_current = frame
             context.view_layer.update()
+            did_something = True
+        if did_something:
+            context.scene.frame_current = frame - self.frame_step
         return {'FINISHED'}
     
 

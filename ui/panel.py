@@ -16,13 +16,16 @@ class SWT_VIEW3D_PT_join_as_pose(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         config = context.scene.join_as_pose_config
-        layout.prop(config, "lock_rotation")
-        layout.prop(config, "original_keyframe")
+        col = layout.column(align=True)
+        col.prop(config, "lock_rotation", toggle=True)
+        col.prop(config, "lock_scale", toggle=True)
+        layout.prop(config, "rest_keyframe")
         layout.prop(config, "frame_step")
         op_props = layout.operator(SWT_POSE_OT_join_as_pose.bl_idname)
         op_props.lock_rotation = config.lock_rotation
+        op_props.lock_scale = config.lock_scale
         op_props.frame_step = config.frame_step
-        op_props.original_keyframe = config.original_keyframe
+        op_props.rest_keyframe = config.rest_keyframe
 
 def register():
     bpy.utils.register_class(SWT_VIEW3D_PT_join_as_pose)
