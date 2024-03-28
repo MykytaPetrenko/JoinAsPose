@@ -1,7 +1,7 @@
 bl_info = {
     "name": "Join as Pose",
     "author": "Mykyta Petrenko (SqeezyPixels)",
-    "version": (1, 0),
+    "version": (1, 0, 1),
     "blender": (3, 3, 0),
     "location": "View3D > Sidebar > Tools",
     "description": "Join one armature to another as a pose",

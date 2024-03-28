@@ -21,7 +21,10 @@ def create_pose_bone_keys(
         pose_bone.keyframe_insert("scale", frame=frame)
 
 
-def join_as_pose(
+"""
+Slow method
+"""
+def join_as_pose_old(
         context: bpy.types.Context,
         source_obj: bpy.types.Object,
         dest_obj: bpy.types.Object,
@@ -40,17 +43,74 @@ def join_as_pose(
                 rot = dest_bone.bone.matrix_local.to_quaternion()
             else:
                 rot = source_bone.matrix_local.to_quaternion()
-                d_rot = dest_bone.bone.matrix_local.to_quaternion()
             
             if lock_scale:
                 scale = ones
             else:
                 scale = ones * source_bone.length / dest_bone.bone.length 
             dest_bone.matrix = Matrix.LocRotScale(loc, rot, scale)
-            
+
             # Update view layer (!IMPORTANT)
             context.view_layer.update()
             create_pose_bone_keys(dest_bone, frame)
+
+
+def join_as_pose(
+        context,
+        source_obj,
+        dest_obj,
+        frame: int,
+        lock_rotation: bool = False,
+        lock_scale: bool = False
+) -> None:
+    # Switch to pose mode for baking
+    bpy.ops.object.mode_set(mode='POSE')
+
+    # Deselect all bones first
+    bpy.ops.pose.select_all(action='DESELECT')
+
+    # Iterate over each bone in the source armature
+    for source_bone in source_obj.data.bones:
+        # Get the destination bone with the same name
+        dest_bone = dest_obj.pose.bones.get(source_bone.name)
+        if dest_obj is not None:
+            dest_bone.bone.select = True
+            # Create constraints
+            c1 = dest_bone.constraints.new('COPY_LOCATION')
+            c1.target = source_obj
+            c1.subtarget = source_bone.name
+            c1.target_space = "POSE"
+            
+            if not lock_rotation:
+                c2 = dest_bone.constraints.new('COPY_ROTATION')
+                c2.target = source_obj
+                c2.subtarget = source_bone.name
+                c2.target_space = "POSE"
+
+            if not lock_scale:
+                scale = source_bone.length / dest_bone.bone.length
+                c3 = dest_bone.constraints.new('LIMIT_SCALE')
+                c3.use_max_x, c3.use_min_x = True, True
+                c3.use_max_y, c3.use_min_y = True, True
+                c3.use_max_z, c3.use_min_z = True, True
+                c3.min_x, c3.max_x = scale, scale
+                c3.min_y, c3.max_y = scale, scale
+                c3.min_z, c3.max_z = scale, scale
+
+
+    # Bake the action for the entire armature for the current frame
+
+    bpy.ops.nla.bake(
+        frame_start=frame, 
+        frame_end=frame, 
+        only_selected=True, 
+        visual_keying=True, 
+        clear_constraints=True, 
+        use_current_action=True, 
+        bake_types={'POSE'}
+    )
+    
+    bpy.ops.object.mode_set(mode='OBJECT')
   
 
 class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
