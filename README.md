@@ -18,3 +18,12 @@ The Join As Pose addon allows attaching the rest pose from one or multiple sourc
 
 > [!NOTE]
 > Binding is based on bone names, so for correct operation, the names must match.
+
+# Feedback and Support
+Join our [Discord Server to](https://discord.gg/zGDqh2CsbJ) share your feedback and ask for help. **Please use right channel for feedback and suppor as I have a few add-ons.**
+
+Also visit my [youtube channel](https://www.youtube.com/@squeezypixels) and [gumroad page](https://squeezypixels.gumroad.com/l/shapekeywrap) If you liked the addon
+
+# Another Add-ons
+- **[MetaReForge](https://www.artstation.com/a/32654843)** - Paid add-on for Metahuman customization in blender
+- **[ShapeKeyWrap](https://github.com/MykytaPetrenko/ShapeKeyWrap)** - Free add-on for transfering shapekeys from on mesh to another one and binding thier values.
