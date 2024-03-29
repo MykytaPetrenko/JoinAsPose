@@ -16,6 +16,7 @@ class SWT_VIEW3D_PT_join_as_pose(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         config = context.scene.join_as_pose_config
+        layout.prop(config, "method")
         col = layout.column(align=True)
         col.prop(config, "lock_rotation", toggle=True)
         col.prop(config, "lock_scale", toggle=True)
@@ -26,6 +27,7 @@ class SWT_VIEW3D_PT_join_as_pose(bpy.types.Panel):
         op_props.lock_scale = config.lock_scale
         op_props.frame_step = config.frame_step
         op_props.rest_keyframe = config.rest_keyframe
+        op_props.use_constraints = True if config.method == "CONSTRAINT" else False
 
 def register():
     bpy.utils.register_class(SWT_VIEW3D_PT_join_as_pose)

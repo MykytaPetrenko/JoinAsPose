@@ -24,7 +24,7 @@ def create_pose_bone_keys(
 """
 Slow method
 """
-def join_as_pose_old(
+def join_as_pose_via_transforms(
         context: bpy.types.Context,
         source_obj: bpy.types.Object,
         dest_obj: bpy.types.Object,
@@ -55,10 +55,29 @@ def join_as_pose_old(
             create_pose_bone_keys(dest_bone, frame)
 
 
-def join_as_pose(
-        context,
-        source_obj,
-        dest_obj,
+def add_reset_pose_framekey(
+        context: bpy.types.Context,
+        obj: bpy.types.Object,
+        frame: int
+) -> None:
+    # Switch to pose mode for baking
+    bpy.ops.object.mode_set(mode='POSE')
+
+    # Deselect all bones first
+    bpy.ops.pose.select_all(action='SELECT')
+    bpy.ops.pose.transforms_clear()
+    context.view_layer.update()
+
+    for pb in obj.pose.bones:
+        create_pose_bone_keys(pb, frame)
+
+    bpy.ops.object.mode_set(mode="OBJECT")
+
+
+def join_as_pose_via_constraints(
+        context: bpy.types.Context,
+        source_obj: bpy.types.Object,
+        dest_obj: bpy.types.Object,
         frame: int,
         lock_rotation: bool = False,
         lock_scale: bool = False
@@ -67,7 +86,9 @@ def join_as_pose(
     bpy.ops.object.mode_set(mode='POSE')
 
     # Deselect all bones first
-    bpy.ops.pose.select_all(action='DESELECT')
+    bpy.ops.pose.select_all(action='SELECT')
+    bpy.ops.pose.transforms_clear()
+    context.view_layer.update()
 
     # Iterate over each bone in the source armature
     for source_bone in source_obj.data.bones:
@@ -114,30 +135,38 @@ def join_as_pose(
   
 
 class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
+    """
+    Join one or multiple selected armatures to the selected armature as a keyframe pose.
+    """
     bl_idname = "sw_tools.join_as_pose"
     bl_label = "Join as Pose"
-    bl_description = "Join one armature to another as a pose"
+    
 
     rest_keyframe: bpy.props.BoolProperty(
         name="Rest Keyframe",
         default=False,
-        description="Creaates a key for the rest pose of the target skeleton"
+        description="Creates a key for the rest pose of the target skeleton"
     )
     lock_rotation: bpy.props.BoolProperty(
         name="Lock Rotation",
         default=False,
-        description="Keep original rotations of the target skeleton bones"
+        description="Keeps original rotations of the target skeleton bones if enabled"
     )
     lock_scale: bpy.props.BoolProperty(
         name="Lock Scale",
         default=False,
-        description="Keep original scale of the target skeleton bones"
+        description="Keeps original scale of the target skeleton bones if enabled"
     )
     frame_step: bpy.props.IntProperty(
         name="Frame Step",
         default=10,
         min=1,
-        description="Step between frame if joining a few armatures"
+        description="The step between framekeys"
+    )
+    use_constraints: bpy.props.BoolProperty(
+        name="Use Constraints",
+        default=True,
+        description="Use Constraints"
     )
     
     @classmethod
@@ -153,19 +182,27 @@ class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
 
     def execute(self, context):
         frame = context.scene.frame_current
+        initial_frame = frame
         dest_obj = context.object
-        did_something = False
+
+        # Pick join function
+        if self.use_constraints:
+            join_function = join_as_pose_via_constraints
+        else:
+            join_function = join_as_pose_via_transforms
+        
+        # Create the rest keyframe if needed
         if self.rest_keyframe:
-            join_as_pose(context, dest_obj, dest_obj, frame, self.lock_rotation)
+            add_reset_pose_framekey(context, dest_obj, frame)
             frame += self.frame_step
             context.scene.frame_current = frame
-            did_something = True
             context.view_layer.update()
         
+        # Transfer rest poses fron the other sceletons except the active one
         for obj in context.selected_objects:
             if obj == context.object:
                 continue
-            join_as_pose(
+            join_function(
                 context,
                 obj,
                 dest_obj,
@@ -176,9 +213,8 @@ class SWT_POSE_OT_join_as_pose(bpy.types.Operator):
             frame += self.frame_step
             context.scene.frame_current = frame
             context.view_layer.update()
-            did_something = True
-        if did_something:
-            context.scene.frame_current = frame - self.frame_step
+        
+        context.scene.frame_current = initial_frame
         return {'FINISHED'}
     
 
